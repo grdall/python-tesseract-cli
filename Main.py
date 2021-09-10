@@ -6,12 +6,16 @@ import base64
 
 from Util import *
 
+apiKeyHeaderName = "apiKey"
+apiKey = ""
+apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
+apiLocalBaseUrl = "localhost:8080/tesseract"
+
 os.system("") # Needed to "trigger" coloured text
 helpFlags = ["-help", "-h"]
 testFlags = ["-test", "-t"]
 tessScanFlags = ["-scan", "-s"]
 localApiSwitches = ["local", "l"]
-apiJsonSwitches = ["json", "j"]
 apiRawSwitches = ["raw", "r"]
 apiCleanedSwitches = ["cleaned", "c"]
 localTesseractSwitches = ["program", "exe"]
@@ -47,42 +51,56 @@ class Main:
                 Main.PrintHelp()
 
             elif(arg in testFlags):
+                args = Util.ExtractArgs(argIndex, argV)
                 print("test")
+
+                print(os.listdir(args[0]))
+
                 quit()
 
             elif(arg in tessScanFlags):
                 args = Util.ExtractArgs(argIndex, argV)
-                img = cv2.imread(args[0])
+                image = cv2.imread(args[0])
 
-                if(set(args).issubset(set(localTesseractSwitches))):
-                    text = pytesseract.image_to_string(img, lang=args[1])
+                if(Util.arrayContains(args, localTesseractSwitches)):
+                    text = pytesseract.image_to_string(image, lang=args[1])
                     argIndex += len(args)
                     continue
 
-                apiResponse = None
-                if(set(args).issubset(set(localApiSwitches))):
-                    apiResponse = ""
+                response = None
+                if(Util.arrayContains(args, localApiSwitches)):
+                    response = ""
                 else:
-                    apiResponse = ""
+                    dotSplit = args[0].split(".")
+                    extension = "." + str(dotSplit[len(dotSplit) - 1])
+                    buffer = cv2.imencode(extension, image)[1]
+                    imageBase64 = base64.b64encode(buffer)
 
-                if(apiResponse == None):
+                    body = imageBase64
+                    params = { "languageKey": args[1] } 
+                    response = Util.apiCall(apiBaseUrl, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+
+                if(response == None):
                     print("Failed to get data from API.")
                     argIndex += len(args)
                     continue
-                elif(set(args).issubset(set(apiJsonSwitches))):
-                    print(2) #(apiResponse.json)
-                elif(set(args).issubset(set(apiRawSwitches))):
-                    print(3) #(apiResponse["data"]["contentRaw"])
-                elif(set(args).issubset(set(apiCleanedSwitches))):
-                    print(4) #(apiResponse["data"]["contentCleaned"])
+                elif(Util.arrayContains(args, apiRawSwitches)):
+                    print(response.json()["data"]["contentRaw"])
+                elif(Util.arrayContains(args, apiCleanedSwitches)):
+                    print(response.json()["data"]["contentCleaned"])
+                else:
+                    print(response.json())
 
                 argIndex += len(args)
 
             elif(arg in tessLangFlags):
-                print("Installed Tesseract languages:")
+                print("Locally Installed Tesseract languages:")
                 print(tessLang)
 
                 # TODO print for API
+                print("API installed Tesseract languages:")
+                response = Util.apiCall(apiBaseUrl, "/languages", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
+                print(response.json()["data"])
 
             # Invalid, inform and quit
             else:
@@ -104,11 +122,10 @@ class Main:
         print(str(helpFlags) + ": prints this information about input arguments.")
         print(str(testFlags) + ": a method of calling experimental code (when you want to test if something works).")
         print(str(tessScanFlags) + " + [path to image] + [language]: scan an image with Tesseract and get the text.")
-        print("\t" + str(localApiSwitches) + ": TODO.")
-        print("\t" + str(apiJsonSwitches) + ": TODO.")
-        print("\t" + str(apiRawSwitches) + ": TODO.")
-        print("\t" + str(apiCleanedSwitches) + ": TODO.")
-        print("\t" + str(localTesseractSwitches) + ": TODO.")
+        print("\t" + str(localApiSwitches) + f": when scanning with API, use local at {apiLocalBaseUrl}.")
+        print("\t" + str(apiRawSwitches) + ": when scanning with API, only print the raw string from Tesseract.")
+        print("\t" + str(apiCleanedSwitches) + ": when scanning with API, only print the cleaned string from Tesseract.")
+        print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
         print(str(tessLangFlags) + ": print the available languages for Tesseract.")
 
 if __name__ == "__main__":

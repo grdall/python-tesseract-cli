@@ -3,6 +3,7 @@ import os
 from enum import Enum
 import requests
 import time
+import datetime
 
 class Util:
     def DisablePrint():
@@ -76,6 +77,17 @@ class Util:
 
         return colorArg + str(text) + Util.colors["ENDC"]
 
+    def getDatetime(numbersOnly = False):
+        """
+        Get datetime as yyy-
+        """
+
+        now = datetime.datetime.now()
+        if(numbersOnly):
+            return now.strftime("%Y%m%d%H%M%S%f")
+        else:
+            return now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "+02:00"
+
     # https://note.nkmk.me/en/python-check-int-float/
     def IsNumber(n, intOnly = False):
         """
@@ -137,7 +149,7 @@ class Util:
             
         return tableString  
 
-    def apiCall(baseUrl, endpoint, verb, params, body, headers, retries = 4, timeout = 4):
+    def apiCall(baseUrl, endpoint, verb, params = None, body = None, headers = None, retries = 4, timeout = 4):
         """
         Make an API call to {baseUrl}{endpoint}, using verb. Format params, header, and body like params = {"key": "value"}, 
         or body as just value. Retries default 4 times, waiting default 4 seconds after fail.
@@ -152,15 +164,26 @@ class Util:
             if(verb == HttpVerb.POST):
                 response = requests.post(f"{baseUrl}{endpoint}", params = params, data = body, headers = headers)
 
-            if(response.status_code == 200 or response.status_code == 500):
+            if(response.status_code == 200 or response.status_code == 400 or response.status_code == 500):
                 return response
             else:
                 print(f"Request to {baseUrl}{endpoint} failed with code: {response.status_code}. Codes 408 and 503 are common for websites warming up...")
                 time.sleep(timeout)
 
-        print(f"Web request to {baseUrl}{endpoint} failed all {retries} retries, after a minimum of {retreis * timeout} seconds...")
+        print(f"Web request to {baseUrl}{endpoint} failed all {retries} retries, after a minimum of {retries * timeout} seconds...")
         return response        
 
+    def arrayContains(arrayA, arrayB):
+        """
+        Return true if any element in arrayA a can be found in array arrayB, else false.
+        """
+
+        for a in arrayA:
+            for b in arrayB:
+                if(a == b):
+                    return True
+
+        return False
 
     colors = {
         "GRAY": "\x1b[1;30;40m",

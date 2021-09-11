@@ -10,6 +10,7 @@ apiKeyHeaderName = "apiKey"
 apiKey = ""
 apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
 apiLocalBaseUrl = "localhost:8080/tesseract"
+batchOutputDir = "text"
 
 os.system("") # Needed to "trigger" coloured text
 helpFlags = ["-help", "-h"]
@@ -43,6 +44,8 @@ class Main:
 
         if(argC < 2): # Default
             Main.PrintHelp()
+            response = Util.apiCall(apiBaseUrl, "/health", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
+            print("API Uptime: " + response.json()["data"]["message"])
 
         while argIndex < argC:
             arg = sys.argv[argIndex].lower()
@@ -53,8 +56,19 @@ class Main:
             elif(arg in testFlags):
                 args = Util.ExtractArgs(argIndex, argV)
                 print("test")
+                # pathSplit = os.path.splitext(os.path.basename(args[0]))
 
-                print(os.listdir(args[0]))
+                # outFilename = pathSplit[0] + Util.getDatetime(True) + ".txt"
+                # print(f"Scanning directory, writing to file {outFilename}")
+                # print(pathSplit)
+                # print(os.listdir(args[0]))
+
+                # outFile = open("test.txt", "w")
+                # outFile.write("working")
+                # outFile.close()
+
+                obj = FileObject(args[0])
+                print(vars(obj))
 
                 quit()
 

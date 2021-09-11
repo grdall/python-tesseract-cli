@@ -10,7 +10,7 @@ apiKeyHeaderName = "apiKey"
 apiKey = ""
 apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
 apiLocalBaseUrl = "localhost:8080/tesseract"
-batchOutputDir = "text"
+batchOutputDir = "text" # Relative or absolute path. Note that the parent of this directory must exist, but the directory itself will be made if there are none.
 
 os.system("") # Needed to "trigger" coloured text
 helpFlags = ["-help", "-h"]
@@ -111,7 +111,6 @@ class Main:
                 print("Locally Installed Tesseract languages:")
                 print(tessLang)
 
-                # TODO print for API
                 print("API installed Tesseract languages:")
                 response = Util.apiCall(apiBaseUrl, "/languages", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
                 print(response.json()["data"])

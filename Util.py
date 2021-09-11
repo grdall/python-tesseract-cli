@@ -203,3 +203,25 @@ class HttpVerb(Enum):
     PUT = 2,
     PATCH = 3,
     DELETE = 4
+
+class FileObject():
+    def __init__(self, fullPath = "", directory = "", relativePath = "", fileLeaf = "", filename = "", fileroot = "", extension = "", extensionWithDot = ""):
+        self.fullPath = fullPath
+        self.directory = directory
+        self.relativePath = relativePath
+        self.fileLeaf = fileLeaf
+        self.filename = filename
+        self.fileroot = fileroot
+        self.extension = extension
+        self.extensionWithDot = extensionWithDot
+
+    def __init__(self, relativePath):
+        _fullPath = os.path.abspath(relativePath)
+        self.fullPath = _fullPath
+        self.directory = os.path.split(_fullPath)[0]
+        self.relativePath = relativePath # TODO like ., .., ..\\..\\..
+        self.fileLeaf = os.path.split(self.directory)[-1]
+        self.filename = os.path.basename(relativePath)
+        self.fileroot = ".".join(relativePath.split(".")[:-1])
+        self.extension = relativePath.split(".")[-1]
+        self.extensionWithDot = f".{self.extension}"

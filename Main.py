@@ -3,11 +3,13 @@ import os
 import pytesseract
 import cv2
 import base64
+from dotenv import load_dotenv
+load_dotenv()
 
 from Util import *
 
 apiKeyHeaderName = "apiKey"
-apiKey = ""
+apiKey = os.environ.get("API_KEY")
 apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
 apiLocalBaseUrl = "localhost:8080/tesseract"
 batchOutputDir = "text" # Relative or absolute path. Note that the parent of this directory must exist, but the directory itself will be made if there are none.

@@ -77,17 +77,6 @@ class Util:
 
         return colorArg + str(text) + Util.colors["ENDC"]
 
-    def getDatetime(numbersOnly = False):
-        """
-        Get datetime as yyy-
-        """
-
-        now = datetime.datetime.now()
-        if(numbersOnly):
-            return now.strftime("%Y%m%d%H%M%S%f")
-        else:
-            return now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "+02:00"
-
     # https://note.nkmk.me/en/python-check-int-float/
     def IsNumber(n, intOnly = False):
         """
@@ -185,6 +174,15 @@ class Util:
 
         return False
 
+    def mkdir(dirName):
+        """
+        Make directory if none exist.
+        """
+
+        # TODO recursive all subdirs
+        if(not os.path.isdir(dirName)):
+            os.mkdir(dirName)
+
     colors = {
         "GRAY": "\x1b[1;30;40m",
         "HEADER": "\x1b[95m",
@@ -226,36 +224,45 @@ class FileObject():
         self.extension = relativePath.split(".")[-1]
         self.extensionWithDot = f".{self.extension}"
 
-# https://stackoverflow.com/questions/2235173/what-is-the-naming-standard-for-path-components
-# Consider the URI:
-# C:\users\OddThinking\Documents\My Source\Widget\foo.src
+    # https://stackoverflow.com/questions/2235173/what-is-the-naming-standard-for-path-components
+    # Consider the URI:
+    # C:\users\OddThinking\Documents\My Source\Widget\foo.src
 
-# A) foo
-# Vim calls it file root (:help filename-modifiers)
+    # A) foo
+    # Vim calls it file root (:help filename-modifiers)
 
-# B) foo.src
-# file name or base name
+    # B) foo.src
+    # file name or base name
 
-# C) src (without dot)
-# file/name extension
+    # C) src (without dot)
+    # file/name extension
 
-# D) .src (with dot)
-# also file extension. Simply store without the dot, if there is no dot on a file, it has no extension
+    # D) .src (with dot)
+    # also file extension. Simply store without the dot, if there is no dot on a file, it has no extension
 
-# E) C:\users\OddThinking\Documents\My Source\
-# top of the tree
-# No convention, git calls it base directory
+    # E) C:\users\OddThinking\Documents\My Source\
+    # top of the tree
+    # No convention, git calls it base directory
 
-# F) Widget\foo.src
-# path from top of the tree to the leaf
-# relative path
+    # F) Widget\foo.src
+    # path from top of the tree to the leaf
+    # relative path
 
-# G) Widget
-# one node of the tree
-# no convention, maybe a simple directory
+    # G) Widget
+    # one node of the tree
+    # no convention, maybe a simple directory
 
-# H) C:\users\OddThinking\Documents\My Source\Widget\
-# dir name
+    # H) C:\users\OddThinking\Documents\My Source\Widget\
+    # dir name
 
-# I) C:\users\OddThinking\Documents\My Source\Widget\foo.src
-# full/absolute path
+    # I) C:\users\OddThinking\Documents\My Source\Widget\foo.src
+    # full/absolute path
+
+class DateTimeObject():
+    def __init__(self, offset = "02:00"):
+        now = datetime.datetime.now()
+        self.now = now
+        self.iso = now.strftime("%Y-%m-%dT%H:%M:%S") + f"+{offset}" # https://en.wikipedia.org/wiki/ISO_8601
+        self.isoAsNumber = now.strftime("%Y%m%d%H%M%S") + offset.replace(":", "") # All but [0-9] removed
+        self.isoWithMilli = now.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + f"+{offset}"
+        self.isoWithMilliAsNumber = now.strftime("%Y%m%d%H%M%S%f")[:-3] # All but [0-9] removed

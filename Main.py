@@ -76,36 +76,63 @@ class Main:
 
             elif(arg in tessScanFlags):
                 args = Util.ExtractArgs(argIndex, argV)
-                image = cv2.imread(args[0])
 
-                if(Util.arrayContains(args, localTesseractSwitches)):
-                    text = pytesseract.image_to_string(image, lang=args[1])
-                    argIndex += len(args)
-                    continue
-
-                response = None
-                if(Util.arrayContains(args, localApiSwitches)):
-                    response = ""
+                sourceIsDir = True
+                files = []
+                if(os.path.isfile(args[0])):
+                    files.append(FileObject(args[0]))
+                    sourceIsDir = False
                 else:
-                    dotSplit = args[0].split(".")
-                    extension = "." + str(dotSplit[len(dotSplit) - 1])
-                    buffer = cv2.imencode(extension, image)[1]
-                    imageBase64 = base64.b64encode(buffer)
+                    for path in os.listdir(args[0]):
+                        if(path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".tif", ".tiff"))):
+                            files.append(FileObject(os.path.join(args[0], path)))
+                        else:
+                            print(f"File {path} was not an image, will not process.")
 
-                    body = imageBase64
-                    params = { "languageKey": args[1] } 
-                    response = Util.apiCall(apiBaseUrl, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+                for fileObject in files:
+                    imageFile = cv2.imread(fileObject.fullPath)
 
-                if(response == None):
-                    print("Failed to get data from API.")
-                    argIndex += len(args)
-                    continue
-                elif(Util.arrayContains(args, apiRawSwitches)):
-                    print(response.json()["data"]["contentRaw"])
-                elif(Util.arrayContains(args, apiCleanedSwitches)):
-                    print(response.json()["data"]["contentCleaned"])
-                else:
-                    print(response.json())
+                    if(Util.arrayContains(args, localTesseractSwitches)):
+                        text = pytesseract.image_to_string(imageFile, lang=args[1])
+                        argIndex += len(args)
+                        continue
+
+                    response = None
+                    if(Util.arrayContains(args, localApiSwitches)):
+                        response = ""
+                    else:
+                        buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
+                        imageBase64 = base64.b64encode(buffer)
+
+                        body = imageBase64
+                        params = { "languageKey": args[1] } 
+                        response = Util.apiCall(apiBaseUrl, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+
+                    if(sourceIsDir):
+                        outPath = batchOutputDir
+                        if(not os.path.isabs(batchOutputDir)):
+                            outPath = os.path.join(fileObject.directory, batchOutputDir)
+                        if(not os.path.isdir(outPath)):
+                            os.mkdir(outPath)
+
+                        outputFilename = f"{fileObject.filename}-{DateTimeObject().isoWithMilliAsNumber}.txt"
+                        outFileFullName = os.path.join(outPath, outputFilename)
+                        print(f"Scanning directory, writing to file {outputFilename}")
+
+                        outFile = open(outFileFullName, "w")
+                        outFile.write(response.json()["data"]["contentCleaned"])
+                        outFile.close
+                    else:
+                        if(response == None):
+                            print("Failed to get data from API.")
+                            argIndex += len(args)
+                            continue
+                        elif(Util.arrayContains(args, apiRawSwitches)):
+                            print(response.json()["data"]["contentRaw"])
+                        elif(Util.arrayContains(args, apiCleanedSwitches)):
+                            print(response.json()["data"]["contentCleaned"])
+                        else:
+                            print(response.json())
 
                 argIndex += len(args)
 

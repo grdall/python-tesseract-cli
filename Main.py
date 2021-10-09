@@ -13,6 +13,7 @@ apiKey = os.environ.get("API_KEY")
 apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
 apiLocalBaseUrl = "localhost:8080/tesseract"
 batchOutputDir = "text" # Relative or absolute path. Note that the parent of this directory must exist, but the directory itself will be made if there are none.
+apiMaxBytes = 512000
 
 os.system("") # Needed to "trigger" coloured text
 helpFlags = ["-help", "-h"]
@@ -22,6 +23,7 @@ localApiSwitches = ["local", "l"]
 apiRawSwitches = ["raw", "r"]
 apiCleanedSwitches = ["cleaned", "c"]
 localTesseractSwitches = ["program", "exe"]
+scaleImageForApiSwitches = ["scale", "s"]
 tessLangFlags = ["-tesseractlanguage", "-tesslang", "-tl"]
 tessLang = ["english (\"eng\")", 
 "norwegian (\"nor\")", 
@@ -91,10 +93,22 @@ class Main:
 
                 for fileObject in files:
                     imageFile = cv2.imread(fileObject.fullPath)
+                    imageFileByteSize = os.path.getsize(fileObject.fullPath)
+
+                    print(args)
+                    if(Util.arrayContains(args, scaleImageForApiSwitches)):
+                        originalDimensions = (imageFile.shape[1], imageFile.shape[0])
+                        scalePercentage = (imageFileByteSize / apiMaxBytes) ** 0.5 # sqrt([current value]/[wanted value])
+                        newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
+                        imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
+                        Util.printS("Scaling image from ", originalDimensions, " to ", newDimensions)
 
                     if(Util.arrayContains(args, localTesseractSwitches)):
                         text = pytesseract.image_to_string(imageFile, lang=args[1])
                         argIndex += len(args)
+
+                        # TODO save text for array of images
+                        print(text)
                         continue
 
                     response = None
@@ -107,6 +121,15 @@ class Main:
                         body = imageBase64
                         params = { "languageKey": args[1] } 
                         response = Util.apiCall(apiBaseUrl, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+
+                    if(response == None):
+                        print("Could not call the API (unknown reason).")
+                        continue 
+                    
+                    if(response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
+                        print("Error in API call:")
+                        Util.printS("\t", response.json()["message"])
+                        continue
 
                     if(sourceIsDir):
                         outPath = batchOutputDir
@@ -168,6 +191,7 @@ class Main:
         print("\t" + str(apiRawSwitches) + ": when scanning with API, only print the raw string from Tesseract.")
         print("\t" + str(apiCleanedSwitches) + ": when scanning with API, only print the cleaned string from Tesseract.")
         print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
+        print("\t" + str(scaleImageForApiSwitches) + ": scale the image to best fit the API treshold of {apiMaxBytes}.")
         print(str(tessLangFlags) + ": print the available languages for Tesseract.")
 
 if __name__ == "__main__":

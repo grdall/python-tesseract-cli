@@ -220,7 +220,7 @@ class FileObject():
         self.relativePath = relativePath # TODO like ., .., ..\\..\\..
         self.fileLeaf = os.path.split(self.directory)[-1]
         self.filename = os.path.basename(relativePath)
-        self.fileroot = ".".join(relativePath.split(".")[:-1])
+        self.fileroot = self.filename.split(".")[0]
         self.extension = relativePath.split(".")[-1]
         self.extensionWithDot = f".{self.extension}"
 

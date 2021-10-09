@@ -18,7 +18,7 @@ class Util:
         """
         sys.stdout = sys.__stdout__
 
-    def ExtractArgs(currentArgsIndex, args, numbersOnly = False, pathsOnly = False, urlsOnly = False):
+    def ExtractArgs(currentArgsIndex, args, numbersOnly = False, pathsOnly = False, urlsOnly = False, flagIndicator = "-"):
         """
         Extract non-flag arguments from array of args, options to only accept numbers, paths, urls.\n\n
         int currentArgsIndex
@@ -29,7 +29,7 @@ class Util:
         """
         _args = []
         for arg in args[currentArgsIndex + 1:]:
-            if(arg[0] == "-"):
+            if(arg.startswith(flagIndicator)):
                 break
             if(numbersOnly and not Util.IsNumber(arg)):
                 Util.PrintS("Argument ", arg, " is not a number.")
@@ -44,7 +44,7 @@ class Util:
             _args.append(arg)
         return _args
 
-    def PrintS(*args):
+    def printS(*args):
         """
         Concats all arguments and prints them as string (delim not included).\n\n
         any *args

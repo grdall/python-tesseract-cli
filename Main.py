@@ -1,3 +1,4 @@
+from genericpath import exists
 import sys
 import os
 import pytesseract
@@ -79,48 +80,55 @@ class Main:
             elif(arg in tessScanFlags):
                 args = Util.ExtractArgs(argIndex, argV)
 
-                sourceIsDir = True
+                sourceInput = args[0]
+                sourceIsDir = False
                 files = []
-                if(os.path.isfile(args[0])):
-                    files.append(FileObject(args[0]))
-                    sourceIsDir = False
+                if(not os.path.exists(sourceInput)):
+                    print("File or directory does not exist.")
+                    argIndex += len(args)
+                    continue
+                elif(os.path.isfile(sourceInput)):
+                    files.append(FileObject(sourceInput))
                 else:
-                    for path in os.listdir(args[0]):
+                    sourceIsDir = True
+                    for path in os.listdir(sourceInput):
                         if(path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".tif", ".tiff"))):
-                            files.append(FileObject(os.path.join(args[0], path)))
+                            files.append(FileObject(os.path.join(sourceInput, path)))
                         else:
                             print(f"File {path} was not an image, will not process.")
 
                 for fileObject in files:
                     imageFile = cv2.imread(fileObject.fullPath)
-                    imageFileByteSize = os.path.getsize(fileObject.fullPath)
-
-                    print(args)
-                    if(Util.arrayContains(args, scaleImageForApiSwitches)):
-                        originalDimensions = (imageFile.shape[1], imageFile.shape[0])
-                        scalePercentage = (imageFileByteSize / apiMaxBytes) ** 0.5 # sqrt([current value]/[wanted value])
-                        newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
-                        imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
-                        Util.printS("Scaling image from ", originalDimensions, " to ", newDimensions)
 
                     if(Util.arrayContains(args, localTesseractSwitches)):
                         text = pytesseract.image_to_string(imageFile, lang=args[1])
-                        argIndex += len(args)
-
-                        # TODO save text for array of images
                         print(text)
+                        # TODO save text for array of images
+
+                        argIndex += len(args)
                         continue
 
-                    response = None
-                    if(Util.arrayContains(args, localApiSwitches)):
-                        response = ""
-                    else:
-                        buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
-                        imageBase64 = base64.b64encode(buffer)
+                    buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
+                    Util.printS("buffer ", len(buffer))
 
-                        body = imageBase64
-                        params = { "languageKey": args[1] } 
-                        response = Util.apiCall(apiBaseUrl, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+                    if(Util.arrayContains(args, scaleImageForApiSwitches)):
+                        originalDimensions = (imageFile.shape[1], imageFile.shape[0])
+                        scalePercentage = (len(buffer) / apiMaxBytes) ** 0.5 # sqrt([current value]/[wanted value])
+                        newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
+                        imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
+                        Util.printS("Scaling image from ", originalDimensions, " to ", newDimensions)
+                        cv2.imwrite("./test.jpg", imageFile)
+
+                    buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
+                    Util.printS("buffer2 ", len(buffer))
+                    # TODO more reliable scaling, when scaling, check scaled images, obvious words like "sentralt" in hellstrom complete whiff
+
+                    apiBase =  apiLocalBaseUrl if Util.arrayContains(args, localApiSwitches) else apiBaseUrl
+                    response = None
+                    imageBase64 = base64.b64encode(buffer)
+                    body = imageBase64
+                    params = { "languageKey": args[1] } 
+                    response = Util.apiCall(apiBase, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
 
                     if(response == None):
                         print("Could not call the API (unknown reason).")
@@ -138,7 +146,7 @@ class Main:
                         if(not os.path.isdir(outPath)):
                             os.mkdir(outPath)
 
-                        outputFilename = f"{fileObject.filename}-{DateTimeObject().isoWithMilliAsNumber}.txt"
+                        outputFilename = f"{fileObject.fileroot}-{DateTimeObject().isoWithMilliAsNumber}.txt"
                         outFileFullName = os.path.join(outPath, outputFilename)
                         print(f"Scanning directory, writing to file {outputFilename}")
 
@@ -190,6 +198,7 @@ class Main:
         print("\t" + str(localApiSwitches) + f": when scanning with API, use local at {apiLocalBaseUrl}.")
         print("\t" + str(apiRawSwitches) + ": when scanning with API, only print the raw string from Tesseract.")
         print("\t" + str(apiCleanedSwitches) + ": when scanning with API, only print the cleaned string from Tesseract.")
+        print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
         print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
         print("\t" + str(scaleImageForApiSwitches) + ": scale the image to best fit the API treshold of {apiMaxBytes}.")
         print(str(tessLangFlags) + ": print the available languages for Tesseract.")

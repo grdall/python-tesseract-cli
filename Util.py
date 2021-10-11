@@ -153,11 +153,14 @@ class Util:
             if(verb == HttpVerb.POST):
                 response = requests.post(f"{baseUrl}{endpoint}", params = params, data = body, headers = headers)
 
-            if(response.status_code == 200 or response.status_code == 400 or response.status_code == 500):
+            if(response.status_code >= 200 and response.status_code < 300):
                 return response
-            else:
-                print(f"Request to {baseUrl}{endpoint} failed with code: {response.status_code}. Codes 408 and 503 are common for websites warming up...")
+            elif(response.status_code == 408 or response.status_code == 503):
+                print(f"Request to {baseUrl}{endpoint} failed with code: {response.status_code}. Codes 408 and 503 are common for websites warming up. Retrying...")
                 time.sleep(timeout)
+            else:
+                print(f"Request to {baseUrl}{endpoint} failed with code: {response.status_code}.")
+                return None
 
         print(f"Web request to {baseUrl}{endpoint} failed all {retries} retries, after a minimum of {retries * timeout} seconds...")
         return response        

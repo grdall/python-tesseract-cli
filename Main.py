@@ -99,6 +99,7 @@ class Main:
 
                 for fileObject in files:
                     imageFile = cv2.imread(fileObject.fullPath)
+                    print(f"Scanning file {fileObject.filename}")
 
                     if(Util.arrayContains(args, localTesseractSwitches)):
                         text = pytesseract.image_to_string(imageFile, lang=args[1])
@@ -108,22 +109,18 @@ class Main:
                         argIndex += len(args)
                         continue
 
-                    buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
-                    Util.printS("buffer ", len(buffer))
-
                     if(Util.arrayContains(args, scaleImageForApiSwitches)):
                         originalDimensions = (imageFile.shape[1], imageFile.shape[0])
-                        scalePercentage = (len(buffer) / apiMaxBytes) ** 0.5 # sqrt([current value]/[wanted value])
+                        bufferSize = len(cv2.imencode(fileObject.extensionWithDot, imageFile)[1])
+                        apiMaxBytesTolerance = (apiMaxBytes/20)
+                        scalePercentage = (bufferSize / (apiMaxBytes - apiMaxBytesTolerance)) ** 0.5 # sqrt([current value]/[wanted value])
                         newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
                         imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
                         Util.printS("Scaling image from ", originalDimensions, " to ", newDimensions)
                         cv2.imwrite("./test.jpg", imageFile)
 
                     buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
-                    Util.printS("buffer2 ", len(buffer))
-                    # TODO more reliable scaling, when scaling, check scaled images, obvious words like "sentralt" in hellstrom complete whiff
-
-                    apiBase =  apiLocalBaseUrl if Util.arrayContains(args, localApiSwitches) else apiBaseUrl
+                    apiBase = apiLocalBaseUrl if Util.arrayContains(args, localApiSwitches) else apiBaseUrl
                     response = None
                     imageBase64 = base64.b64encode(buffer)
                     body = imageBase64
@@ -148,11 +145,11 @@ class Main:
 
                         outputFilename = f"{fileObject.fileroot}-{DateTimeObject().isoWithMilliAsNumber}.txt"
                         outFileFullName = os.path.join(outPath, outputFilename)
-                        print(f"Scanning directory, writing to file {outputFilename}")
 
                         outFile = open(outFileFullName, "w")
                         outFile.write(response.json()["data"]["contentCleaned"])
                         outFile.close
+                        print(f"Scan complete, output written in {outputFilename}")
                     else:
                         if(response == None):
                             print("Failed to get data from API.")

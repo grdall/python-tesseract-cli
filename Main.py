@@ -1,13 +1,13 @@
-from genericpath import exists
 import sys
 import os
+from myutil.Util import *
+from myutil.DateTimeObject import DateTimeObject
+from myutil.FilePathObject import FilePathObject
 import pytesseract
 import cv2
 import base64
 from dotenv import load_dotenv
 load_dotenv()
-
-from Util import *
 
 apiKeyHeaderName = "apiKey"
 apiKey = os.environ.get("API_KEY")
@@ -49,7 +49,7 @@ class Main:
 
         if(argC < 2): # Default
             Main.PrintHelp()
-            response = Util.apiCall(apiBaseUrl, "/health", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
+            response = requestCall(apiBaseUrl, "/health", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
             print("API Uptime: " + response.json()["data"]["message"])
 
         while argIndex < argC:
@@ -59,11 +59,11 @@ class Main:
                 Main.PrintHelp()
 
             elif(arg in testFlags):
-                args = Util.ExtractArgs(argIndex, argV)
+                args = extractArgs(argIndex, argV)
                 print("test")
                 # pathSplit = os.path.splitext(os.path.basename(args[0]))
 
-                # outFilename = pathSplit[0] + Util.getDatetime(True) + ".txt"
+                # outFilename = pathSplit[0] + getDatetime(True) + ".txt"
                 # print(f"Scanning directory, writing to file {outFilename}")
                 # print(pathSplit)
                 # print(os.listdir(args[0]))
@@ -72,13 +72,13 @@ class Main:
                 # outFile.write("working")
                 # outFile.close()
 
-                obj = FileObject(args[0])
+                obj = FilePathObject(args[0])
                 print(vars(obj))
 
                 quit()
 
             elif(arg in tessScanFlags):
-                args = Util.ExtractArgs(argIndex, argV)
+                args = extractArgs(argIndex, argV)
 
                 sourceInput = args[0]
                 sourceIsDir = False
@@ -88,12 +88,12 @@ class Main:
                     argIndex += len(args)
                     continue
                 elif(os.path.isfile(sourceInput)):
-                    files.append(FileObject(sourceInput))
+                    files.append(FilePathObject(sourceInput))
                 else:
                     sourceIsDir = True
                     for path in os.listdir(sourceInput):
                         if(path.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".tif", ".tiff"))):
-                            files.append(FileObject(os.path.join(sourceInput, path)))
+                            files.append(FilePathObject(os.path.join(sourceInput, path)))
                         else:
                             print(f"File {path} was not an image, will not process.")
 
@@ -101,7 +101,7 @@ class Main:
                     imageFile = cv2.imread(fileObject.fullPath)
                     print(f"Scanning file {fileObject.filename}")
 
-                    if(Util.arrayContains(args, localTesseractSwitches)):
+                    if(arrayContains(args, localTesseractSwitches)):
                         text = pytesseract.image_to_string(imageFile, lang=args[1])
                         print(text)
                         # TODO save text for array of images
@@ -109,23 +109,23 @@ class Main:
                         argIndex += len(args)
                         continue
 
-                    if(Util.arrayContains(args, scaleImageForApiSwitches)):
+                    if(arrayContains(args, scaleImageForApiSwitches)):
                         originalDimensions = (imageFile.shape[1], imageFile.shape[0])
                         bufferSize = len(cv2.imencode(fileObject.extensionWithDot, imageFile)[1])
                         apiMaxBytesTolerance = (apiMaxBytes/20)
                         scalePercentage = (bufferSize / (apiMaxBytes - apiMaxBytesTolerance)) ** 0.5 # sqrt([current value]/[wanted value])
                         newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
                         imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
-                        Util.printS("Scaling image from ", originalDimensions, " to ", newDimensions)
+                        printS("Scaling image from ", originalDimensions, " to ", newDimensions)
                         cv2.imwrite("./test.jpg", imageFile)
 
                     buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
-                    apiBase = apiLocalBaseUrl if Util.arrayContains(args, localApiSwitches) else apiBaseUrl
+                    apiBase = apiLocalBaseUrl if arrayContains(args, localApiSwitches) else apiBaseUrl
                     response = None
                     imageBase64 = base64.b64encode(buffer)
                     body = imageBase64
                     params = { "languageKey": args[1] } 
-                    response = Util.apiCall(apiBase, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+                    response = requestCall(apiBase, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
 
                     if(response == None):
                         print("Could not call the API (unknown reason).")
@@ -133,7 +133,7 @@ class Main:
                     
                     if(response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
                         print("Error in API call:")
-                        Util.printS("\t", response.json()["message"])
+                        printS("\t", response.json()["message"])
                         continue
 
                     if(sourceIsDir):
@@ -155,9 +155,9 @@ class Main:
                             print("Failed to get data from API.")
                             argIndex += len(args)
                             continue
-                        elif(Util.arrayContains(args, apiRawSwitches)):
+                        elif(arrayContains(args, apiRawSwitches)):
                             print(response.json()["data"]["contentRaw"])
-                        elif(Util.arrayContains(args, apiCleanedSwitches)):
+                        elif(arrayContains(args, apiCleanedSwitches)):
                             print(response.json()["data"]["contentCleaned"])
                         else:
                             print(response.json())
@@ -169,7 +169,7 @@ class Main:
                 print(tessLang)
 
                 print("API installed Tesseract languages:")
-                response = Util.apiCall(apiBaseUrl, "/languages", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
+                response = requestCall(apiBaseUrl, "/languages", HttpVerb.GET, headers = { apiKeyHeaderName: apiKey })
                 print(response.json()["data"])
 
             # Invalid, inform and quit

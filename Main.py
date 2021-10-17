@@ -12,7 +12,7 @@ load_dotenv()
 apiKeyHeaderName = "apiKey"
 apiKey = os.environ.get("API_KEY")
 apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
-apiLocalBaseUrl = "localhost:8080/tesseract"
+apiLocalBaseUrl = "http://localhost:8080/tesseract"
 batchOutputDir = "text" # Relative or absolute path. Note that the parent of this directory must exist, but the directory itself will be made if there are none.
 apiMaxBytes = 512000
 
@@ -117,19 +117,14 @@ class Main:
                         newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
                         imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
                         printS("Scaling image from ", originalDimensions, " to ", newDimensions)
-                        cv2.imwrite("./test.jpg", imageFile)
+                        # cv2.imwrite("./test.jpg", imageFile)
 
                     buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
                     apiBase = apiLocalBaseUrl if arrayContains(args, localApiSwitches) else apiBaseUrl
-                    response = None
                     imageBase64 = base64.b64encode(buffer)
                     body = imageBase64
-                    params = { "languageKey": args[1] } 
+                    params = { "languageKey": args[1], "pageSegmentationMode": 6, "engineMode": 3 } 
                     response = requestCall(apiBase, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
-
-                    if(response == None):
-                        print("Could not call the API (unknown reason).")
-                        continue 
                     
                     if(response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
                         print("Error in API call:")

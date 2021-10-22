@@ -15,6 +15,8 @@ apiBaseUrl = "https://grd-tesseract-api.herokuapp.com/tesseract"
 apiLocalBaseUrl = "http://localhost:8080/tesseract"
 batchOutputDir = "text" # Relative or absolute path. Note that the parent of this directory must exist, but the directory itself will be made if there are none.
 apiMaxBytes = 512000
+pageSegMode = 6
+engineMode = 3
 
 os.system("") # Needed to "trigger" coloured text
 helpFlags = ["-help", "-h"]
@@ -97,6 +99,15 @@ class Main:
                         else:
                             print(f"File {path} was not an image, will not process.")
 
+                # Dumb variables can't be global for some unknown reason, works fine with apiMaxBytes
+                pageSegMode = 6
+                engineMode = 3
+
+                if(len(args) > 2 and isNumber(args[2], True)):
+                    pageSegMode = args[2]
+                if(len(args) > 3 and isNumber(args[3], True)):
+                    engineMode = args[3]
+
                 for fileObject in files:
                     imageFile = cv2.imread(fileObject.fullPath)
                     print(f"Scanning file {fileObject.filename}")
@@ -123,8 +134,8 @@ class Main:
                     apiBase = apiLocalBaseUrl if arrayContains(args, localApiSwitches) else apiBaseUrl
                     imageBase64 = base64.b64encode(buffer)
                     body = imageBase64
-                    params = { "languageKey": args[1], "pageSegmentationMode": 6, "engineMode": 3 } 
-                    response = requestCall(apiBase, "/scanImageBase64", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
+                    params = { "languageKey": args[1], "pageSegmentationMode": pageSegMode, "engineMode": engineMode } 
+                    response = requestCall(apiBase, "/scanImageBase64IntParams", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
                     
                     if(response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
                         print("Error in API call:")
@@ -186,7 +197,7 @@ class Main:
 
         print(str(helpFlags) + ": prints this information about input arguments.")
         print(str(testFlags) + ": a method of calling experimental code (when you want to test if something works).")
-        print(str(tessScanFlags) + " + [path to image] + [language]: scan an image with Tesseract and get the text.")
+        print(str(tessScanFlags) + " + [path to image] + [language] + [page segment mode as int]? + [tesseract engine mode]?: scan an image with Tesseract and get the text.")
         print("\t" + str(localApiSwitches) + f": when scanning with API, use local at {apiLocalBaseUrl}.")
         print("\t" + str(apiRawSwitches) + ": when scanning with API, only print the raw string from Tesseract.")
         print("\t" + str(apiCleanedSwitches) + ": when scanning with API, only print the cleaned string from Tesseract.")

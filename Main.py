@@ -8,6 +8,7 @@ import cv2
 import base64
 from dotenv import load_dotenv
 load_dotenv()
+from Util import Util1
 
 apiKeyHeaderName = "apiKey"
 apiKey = os.environ.get("API_KEY")
@@ -80,12 +81,14 @@ class Main:
                 quit()
 
             elif(arg in tessScanFlags):
-                args = extractArgs(argIndex, argV)
+                args = Util1.ExtractArgs(argIndex, argV)
+                print(args)
 
                 sourceInput = args[0]
                 sourceIsDir = False
                 files = []
                 if(not os.path.exists(sourceInput)):
+                    print(sourceInput)
                     print("File or directory does not exist.")
                     argIndex += len(args)
                     continue
@@ -120,15 +123,18 @@ class Main:
                         argIndex += len(args)
                         continue
 
+                    # imageFile = cv2.set
+                    imageFile = cv2.cvtColor(imageFile, cv2.COLOR_BGR2GRAY)
+
                     if(arrayContains(args, scaleImageForApiSwitches)):
                         originalDimensions = (imageFile.shape[1], imageFile.shape[0])
                         bufferSize = len(cv2.imencode(fileObject.extensionWithDot, imageFile)[1])
-                        apiMaxBytesTolerance = (apiMaxBytes/20)
+                        apiMaxBytesTolerance = (apiMaxBytes/10)
                         scalePercentage = (bufferSize / (apiMaxBytes - apiMaxBytesTolerance)) ** 0.5 # sqrt([current value]/[wanted value])
                         newDimensions = (int(imageFile.shape[1] / scalePercentage), int(imageFile.shape[0] / scalePercentage))
-                        imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_AREA)
+                        imageFile = cv2.resize(imageFile, newDimensions, interpolation = cv2.INTER_CUBIC)
                         printS("Scaling image from ", originalDimensions, " to ", newDimensions)
-                        # cv2.imwrite("./test.jpg", imageFile)
+                        cv2.imwrite(fileObject.directory + "\\!latest-scaled.jpg", imageFile)
 
                     buffer = cv2.imencode(fileObject.extensionWithDot, imageFile)[1]
                     apiBase = apiLocalBaseUrl if arrayContains(args, localApiSwitches) else apiBaseUrl
@@ -137,9 +143,10 @@ class Main:
                     params = { "languageKey": args[1], "pageSegmentationMode": pageSegMode, "engineMode": engineMode } 
                     response = requestCall(apiBase, "/scanImageBase64IntParams", HttpVerb.POST, params = params, body = body, headers = { apiKeyHeaderName: apiKey })
                     
-                    if(response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
-                        print("Error in API call:")
-                        printS("\t", response.json()["message"])
+                    if(response == None or response.json()["data"] == None or response.json()["data"]["contentRaw"] == None):
+                        if(response != None and response.json() != None):
+                            printS("Error in API call: ")
+                            printS("\t", response.json()["message"])
                         continue
 
                     if(sourceIsDir):
@@ -157,11 +164,7 @@ class Main:
                         outFile.close
                         print(f"Scan complete, output written in {outputFilename}")
                     else:
-                        if(response == None):
-                            print("Failed to get data from API.")
-                            argIndex += len(args)
-                            continue
-                        elif(arrayContains(args, apiRawSwitches)):
+                        if(arrayContains(args, apiRawSwitches)):
                             print(response.json()["data"]["contentRaw"])
                         elif(arrayContains(args, apiCleanedSwitches)):
                             print(response.json()["data"]["contentCleaned"])

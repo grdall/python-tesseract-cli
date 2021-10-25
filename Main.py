@@ -8,7 +8,6 @@ import cv2
 import base64
 from dotenv import load_dotenv
 load_dotenv()
-from Util import Util1
 
 apiKeyHeaderName = "apiKey"
 apiKey = os.environ.get("API_KEY")
@@ -64,19 +63,6 @@ class Main:
             elif(arg in testFlags):
                 args = extractArgs(argIndex, argV)
                 print("test")
-                # pathSplit = os.path.splitext(os.path.basename(args[0]))
-
-                # outFilename = pathSplit[0] + getDatetime(True) + ".txt"
-                # print(f"Scanning directory, writing to file {outFilename}")
-                # print(pathSplit)
-                # print(os.listdir(args[0]))
-
-                # outFile = open("test.txt", "w")
-                # outFile.write("working")
-                # outFile.close()
-
-                obj = FilePathObject(args[0])
-                print(vars(obj))
 
                 quit()
 
@@ -204,7 +190,6 @@ class Main:
         print("\t" + str(localApiSwitches) + f": when scanning with API, use local at {apiLocalBaseUrl}.")
         print("\t" + str(apiRawSwitches) + ": when scanning with API, only print the raw string from Tesseract.")
         print("\t" + str(apiCleanedSwitches) + ": when scanning with API, only print the cleaned string from Tesseract.")
-        print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
         print("\t" + str(localTesseractSwitches) + ": when scanning, use the local .exe program, not the API.")
         print("\t" + str(scaleImageForApiSwitches) + ": scale the image to best fit the API treshold of {apiMaxBytes}.")
         print(str(tessLangFlags) + ": print the available languages for Tesseract.")
